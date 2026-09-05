@@ -41,27 +41,14 @@ class CodingAgent:
             if response.tool_calls:
                 for tool_call in response.tool_calls:
                     result = call_function(
-                        _to_function_call_part(tool_call),
+                        tool_call,
                         self.working_directory,
                         self.verbose,
                     )
-                    # call_function returns a Gemini types.Content already —
-                    # for now we pass it straight through since we only have
-                    # one provider; this seam is revisited in step 3.
-                    messages.append(result)
+                    formatted = self.provider.format_tool_result(tool_call, result)
+                    messages.append(formatted)
                 continue
 
             return response.text
 
         return "Maximum iterations reached."
-
-
-def _to_function_call_part(tool_call):
-    """Temporary shim: call_function.py expects a Gemini-native function_call_part.
-    Once tools are refactored (step 3) this goes away."""
-    class _Shim:
-        def __init__(self, name, args, id):
-            self.name = name
-            self.args = args
-            self.id = id
-    return _Shim(tool_call.name, tool_call.args, tool_call.id)

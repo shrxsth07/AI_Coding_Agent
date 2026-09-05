@@ -6,6 +6,7 @@ from Functions.get_files_info import schema_get_files_info
 from Functions.get_file_content import schema_get_file_content
 from Functions.write_file import schema_write_file
 from Functions.run_python_file import schema_run_python_file
+from tools.registry import TOOL_REGISTRY, get_all_schemas
 
 
 class GeminiProvider(LLMProvider):
@@ -13,14 +14,7 @@ class GeminiProvider(LLMProvider):
         self.client = genai.Client(api_key=api_key)
         self.model = model
         self.verbose = verbose
-        self.tools = types.Tool(
-            function_declarations=[
-                schema_get_files_info,
-                schema_get_file_content,
-                schema_write_file,
-                schema_run_python_file,
-            ]
-        )
+        self.tools = types.Tool(function_declarations=get_all_schemas())
 
     def generate(self, messages, system_prompt) -> LLMResponse | None:
         try:

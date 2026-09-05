@@ -1,56 +1,15 @@
-from google.genai import types
-
-from Functions.get_files_info import get_files_info
-from Functions.get_file_content import get_file_content
-from Functions.write_file import write_file
-from Functions.run_python_file import run_python_file
+from tools.registry import TOOL_REGISTRY
 
 
-def call_function(function_call_part, working_directory, verbose=False):
-
+def call_function(tool_call, working_directory, verbose=False):
     if verbose:
-        print(
-            f"Calling function: "
-            f"{function_call_part.name}({function_call_part.args})"
-        )
+        print(f"Calling function: {tool_call.name}({tool_call.args})")
     else:
-        print(f" - Calling function: {function_call_part.name}")
+        print(f" - Calling function: {tool_call.name}")
 
-    if function_call_part.name == "get_files_info":
-        result = get_files_info(
-            working_directory,
-            **function_call_part.args
-        )
+    entry = TOOL_REGISTRY.get(tool_call.name)
+    if entry is None:
+        return f"Unknown function: {tool_call.name}"
 
-    elif function_call_part.name == "get_file_content":
-        result = get_file_content(
-            working_directory,
-            **function_call_part.args
-        )
-
-    elif function_call_part.name == "write_file":
-        result = write_file(
-            working_directory,
-            **function_call_part.args
-        )
-
-    elif function_call_part.name == "run_python_file":
-        result = run_python_file(
-            working_directory,
-            **function_call_part.args
-        )
-
-    else:
-        result = f"Unknown function: {function_call_part.name}"
-
-    return types.Content(
-        role="user",
-        parts=[
-            types.Part.from_function_response(
-                name=function_call_part.name,
-                response={
-                    "result": result,
-                },
-            )
-        ],
-    )
+    function, _schema = entry
+    return function(working_directory, **tool_call.args)
