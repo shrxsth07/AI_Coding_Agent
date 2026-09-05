@@ -1,7 +1,7 @@
 # calculator/tests.py
 
 import unittest
-from pkg.calculator import Calculator
+from test_fixtures.Calculator.pkg.calculator import Calculator
 
 
 class TestCalculator(unittest.TestCase):

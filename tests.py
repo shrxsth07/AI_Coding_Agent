@@ -4,7 +4,7 @@ from Functions.write_file import write_file
 from Functions.run_python_file import run_python_file
 
 def main():
-    working_dir = "calculator"
+    working_dir = "test_fixtures/calculator"
     # root_contents = get_files_info(working_dir)
     # print(root_contents)
     # pkg_contents = get_files_info(working_dir, "pkg")
