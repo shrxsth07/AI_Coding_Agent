@@ -51,7 +51,6 @@ def call_function(function_call_part, working_directory, verbose=False):
                 response={
                     "result": result,
                 },
-                id=function_call_part.id,
             )
         ],
     )

@@ -3,6 +3,7 @@ import sys
 from dotenv import load_dotenv
 
 from agent import CodingAgent
+from providers.gemini_provider import GeminiProvider
 
 
 def main():
@@ -19,16 +20,10 @@ def main():
 
     prompt = sys.argv[1]
     verbose_flag = len(sys.argv) == 3 and sys.argv[2] == "--verbose"
-
-    # The directory from which the agent is being executed.
-    # All file operations are restricted to this directory.
     working_directory = os.getcwd()
 
-    agent = CodingAgent(
-        api_key=api_key,
-        working_directory=working_directory,
-        verbose=verbose_flag,
-    )
+    provider = GeminiProvider(api_key=api_key, verbose=verbose_flag)
+    agent = CodingAgent(provider=provider, working_directory=working_directory, verbose=verbose_flag)
 
     result = agent.run(prompt)
     print(result)

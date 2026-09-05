@@ -1,12 +1,6 @@
-import os
-from google import genai
 from google.genai import types
-
-from Functions.get_files_info import schema_get_files_info
-from Functions.get_file_content import schema_get_file_content
-from Functions.write_file import schema_write_file
-from Functions.run_python_file import schema_run_python_file
 from call_function import call_function
+from providers.base import LLMProvider
 
 SYSTEM_PROMPT = """
 You are a helpful AI coding agent.
@@ -27,77 +21,47 @@ The working directory is automatically provided by the application.
 
 
 class CodingAgent:
-    def __init__(self, api_key: str, working_directory: str, max_iters: int = 5, verbose: bool = False):
-        self.client = genai.Client(api_key=api_key)
+    def __init__(self, provider: LLMProvider, working_directory: str, max_iters: int = 5, verbose: bool = False):
+        self.provider = provider
         self.working_directory = working_directory
         self.max_iters = max_iters
         self.verbose = verbose
-        self.available_functions = types.Tool(
-            function_declarations=[
-                schema_get_files_info,
-                schema_get_file_content,
-                schema_write_file,
-                schema_run_python_file,
-            ]
-        )
 
     def run(self, prompt: str) -> str:
-        """Runs the agent loop for a single prompt and returns the final text response."""
-        messages = [
-            types.Content(
-                role="user",
-                parts=[types.Part(text=prompt)],
-            )
-        ]
+        messages = [types.Content(role="user", parts=[types.Part(text=prompt)])]
 
         for _ in range(self.max_iters):
-            response = self._generate(messages, prompt)
+            response = self.provider.generate(messages, SYSTEM_PROMPT)
             if response is None:
                 return "Error: no response from model."
 
-            if not response.candidates:
-                return "Error: no candidates returned."
+            if response.raw_model_content is not None:
+                messages.append(response.raw_model_content)
 
-            model_content = response.candidates[0].content
-            if model_content is not None:
-                messages.append(model_content)
-
-            if response.function_calls:
-                for function_call_part in response.function_calls:
-                    function_call_result = call_function(
-                        function_call_part,
+            if response.tool_calls:
+                for tool_call in response.tool_calls:
+                    result = call_function(
+                        _to_function_call_part(tool_call),
                         self.working_directory,
                         self.verbose,
                     )
-                    messages.append(function_call_result)
+                    # call_function returns a Gemini types.Content already —
+                    # for now we pass it straight through since we only have
+                    # one provider; this seam is revisited in step 3.
+                    messages.append(result)
                 continue
 
             return response.text
 
         return "Maximum iterations reached."
 
-    def _generate(self, messages, prompt):
-        try:
-            response = self.client.models.generate_content(
-                model="gemini-3.6-flash",
-                contents=messages,
-                config=types.GenerateContentConfig(
-                    system_instruction=SYSTEM_PROMPT,
-                    tools=[self.available_functions],
-                ),
-            )
-        except Exception as e:
-            error_message = str(e)
-            if "429" in error_message or "RESOURCE_EXHAUSTED" in error_message:
-                print("Error: Gemini API quota limit reached.")
-                print("Please try again later.")
-            else:
-                print(f"Error communicating with Gemini: {e}")
-            return None
 
-        if self.verbose and response.usage_metadata:
-            print(f"User prompt: {prompt}")
-            print(f"Prompt tokens: {response.usage_metadata.prompt_token_count}")
-            print(f"Response tokens: {response.usage_metadata.candidates_token_count}")
-
-        return response
+def _to_function_call_part(tool_call):
+    """Temporary shim: call_function.py expects a Gemini-native function_call_part.
+    Once tools are refactored (step 3) this goes away."""
+    class _Shim:
+        def __init__(self, name, args, id):
+            self.name = name
+            self.args = args
+            self.id = id
+    return _Shim(tool_call.name, tool_call.args, tool_call.id)
