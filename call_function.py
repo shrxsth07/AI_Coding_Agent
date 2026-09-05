@@ -7,6 +7,7 @@ from Functions.run_python_file import run_python_file
 
 
 def call_function(function_call_part, working_directory, verbose=False):
+
     if verbose:
         print(
             f"Calling function: "
@@ -43,13 +44,14 @@ def call_function(function_call_part, working_directory, verbose=False):
         result = f"Unknown function: {function_call_part.name}"
 
     return types.Content(
-        role="tool",
+        role="user",
         parts=[
             types.Part.from_function_response(
                 name=function_call_part.name,
                 response={
                     "result": result,
                 },
+                id=function_call_part.id,
             )
         ],
     )
