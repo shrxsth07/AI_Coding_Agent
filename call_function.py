@@ -1,11 +1,14 @@
+import logging
 from tools.registry import TOOL_REGISTRY
+
+logger = logging.getLogger(__name__)
 
 
 def call_function(tool_call, working_directory, verbose=False):
     if verbose:
-        print(f"Calling function: {tool_call.name}({tool_call.args})")
+        logger.debug(f"Calling function: {tool_call.name}({tool_call.args})")
     else:
-        print(f" - Calling function: {tool_call.name}")
+        logger.info(f"Calling function: {tool_call.name}")
 
     entry = TOOL_REGISTRY.get(tool_call.name)
     if entry is None:
